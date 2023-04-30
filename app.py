@@ -25,11 +25,10 @@ def main():
     #################################
     ########## Basic setup ##########
     #################################
-    im=Image.open('imgs/HD_ksoe.png')
     st.set_page_config(
         page_title="Hello",
-        page_icon=im,
-        layout="wide",  # {wide, centered}
+        page_icon='😋',
+        layout="centered",  # {wide, centered}
     )
 
     st.title("💵 Simple `Company Name` Recommender")
