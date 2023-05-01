@@ -14,7 +14,6 @@ streamlit run app_simple_recommender.py -- --apikey [API key]
 python app_qa_youtube.py --apikey [API key] --lang [language: {ko, en}]
 ```
 
-
 ## Contributor
 
 | Jeongseob Kim | Jeongsu Shin | Donghyun Kim | Seongyun Kim | Suyeon Choi |
