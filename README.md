@@ -1,12 +1,19 @@
-# Demo_dev_with_langchain
+# Demo_dev_langchain
 
 - OpenAI & Langchain & Streamlit application Demo project
 
 ## Usage
 
+### Simple Recommender
 ```bash
-streamlit run app.py -- --apikey [API key]
+streamlit run app_simple_recommender.py -- --apikey [API key]
 ```
+
+### QA from youtube video
+```bash
+python app_qa_youtube.py --apikey [API key] --lang [language: {ko, en}]
+```
+
 
 ## Contributor
 

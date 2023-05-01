@@ -22,9 +22,8 @@ def main():
     st.info('정보를 보여주고 싶을때 사용하자')  # 파란색 영역
     st.error('문제가 발생했을때 사용')  # 레드 영역    
     '''
-    #################################
+
     ########## Basic setup ##########
-    #################################
     st.set_page_config(
         page_title="Hello",
         page_icon='😋',
@@ -52,9 +51,7 @@ def main():
     parser.add_argument("--apikey", type=str, required=True, help="If you don't know key value, Just ask jskim")
     args = parser.parse_args()
 
-    #################################
     ########## API setting ##########
-    #################################
     API=args.apikey
     # If an API key has been provided, create an OpenAI language model instance
     if API:
@@ -63,9 +60,7 @@ def main():
         # If an API key hasn't been provided, display a warning message
         st.warning("Enter your OPENAI API-KEY. Get your OpenAI API key from [here](https://platform.openai.com/account/api-keys).\n")
 
-    #################################
-    ########## LLM Chaining #########
-    ################################# 
+    ########## LLM Chaining ######### 
     # "text-davinci-003"(llm model)가 "gpt-3.5-turbo"(Chatmodel) 보다 10배는 더 비싸다고 함. 따라서 아래 코드 중 ChatOpenAI를 활용하는 것을 추천
     if st.button("Hey ChatGPT. It's time to show us what you recommend."):
 
