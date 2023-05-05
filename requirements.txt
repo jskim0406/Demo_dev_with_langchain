@@ -6,3 +6,4 @@ youtube-transcript-api
 pytube
 faiss-cpu
 sentence_transformers
+pypdf
