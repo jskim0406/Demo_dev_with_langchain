@@ -14,6 +14,11 @@ streamlit run app_simple_recommender.py -- --apikey [API key]
 streamlit run app_qa_youtube.py -- --apikey [API key] --model_provider [Model provider: {'OpenAI', 'HF'}]
 ```
 
+### QA from PDF with Memory
+```bash
+streamlit run app_qa_pdf.py -- --apikey [API key]
+```
+
 ## Contributor 
 
 | Jeongseob Kim | Jeongsu Shin | Donghyun Kim | Seongyun Kim | Suyeon Choi |
