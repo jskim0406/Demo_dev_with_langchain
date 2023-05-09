@@ -1,6 +1,7 @@
 # Demo_dev_langchain
 
 - OpenAI & Langchain & Streamlit application Demo project
+- suyeon modify
 
 ## Usage
 
