@@ -17,7 +17,12 @@ streamlit run app_qa_youtube.py -- --apikey [API key] --model_provider [Model pr
 
 ### QA from PDF with Memory
 ```bash
-streamlit run app_qa_pdf.py -- --apikey [API key]
+streamlit run app_qa_pdf_w_mem.py -- --apikey [API key]
+```
+
+### QA from wiki page
+```bash
+streamlit run app_qa_wiki.py -- --apikey [API key]
 ```
 
 ## Contributor 
