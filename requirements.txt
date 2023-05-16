@@ -5,5 +5,7 @@ tiktoken
 youtube-transcript-api
 pytube
 faiss-cpu
+faiss-gpu
+pyngrok
 sentence_transformers
 pypdf

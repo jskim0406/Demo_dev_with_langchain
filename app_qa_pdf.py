@@ -15,7 +15,7 @@ Reference
     - huggingface embeddings
         - https://huggingface.co/blog/getting-started-with-embeddings
 '''
-
+import torch
 import openai
 import argparse
 import streamlit as st
@@ -43,6 +43,8 @@ def arg_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--apikey", type=str, required=True, help="If you don't know key value, Just ask jskim")
     parser.add_argument("--hfkey", type=str, default='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', help='HuggingFace api key')
+    # parser.add_argument("--device", type=str, default='cuda' if torch.cuda.is_available() else 'cpu', help='gpu or cpu')
+    parser.add_argument("--device", type=str, default='cpu', help='gpu or cpu')
     args = parser.parse_args()
     return args
 
@@ -69,7 +71,7 @@ def _chunks_from_pdf(file:BytesIO):
 
     # 2. Chunking & metadata 추가(chunk index 정보)
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
+        chunk_size=700,
         separators=['\n\n', '\n', '.', '!', '?', ',', ' ', ''],
         chunk_overlap=200
     )
@@ -85,7 +87,9 @@ def _embed(emb_provider):
 
     # Huggingface(Sentence Transformer)
     elif emb_provider == 'HF':
-        hf_embeddings = HuggingFaceEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2')
+        emb_name = 'sentence-transformers/all-MiniLM-L6-v2'
+        embeddings = HuggingFaceEmbeddings(model_name=emb_name, 
+                                           model_kwargs={'device': args.device})
 
     # Vicuna
     elif emb_provider == 'VC':
@@ -111,7 +115,7 @@ def _getmodel(model_provider):
         
     elif model_provider == 'HF':
         model = HuggingFaceHub(repo_id="facebook/mbart-large-50",
-                               model_kwargs={"temperature": 0, "max_length":200},
+                               model_kwargs={"temperature": 0, "max_length":500, 'truncation': True},
                                huggingfacehub_api_token=args.hfkey)
         
     elif model_provider == 'VC':
@@ -125,7 +129,7 @@ def _getmodel(model_provider):
 
 def _getchain(model, chain_type):
 
-    return_intermediate_steps = False
+    return_intermediate_steps = True
 
     if chain_type == 'refine':
         qa_chain = load_qa_with_sources_chain(model,
@@ -174,14 +178,16 @@ def main(args):
     
         # 4. embed chunks into dense vectorspace (= indexing)
         ########## [here] ##########
-        emb_provider = 'OpenAI'
+        # emb_provider = 'OpenAI'
+        emb_provider = 'HF'
         if emb_provider:
             index = _embed(emb_provider)
     
 
         # 5. define llm model
         ########## [here] ##########
-        model_provider = 'OpenAI'
+        # model_provider = 'OpenAI'
+        model_provider = 'HF'
         if model_provider:
             model = _getmodel(model_provider)
 
@@ -198,11 +204,12 @@ def main(args):
                 ########## [here] ##########
                 query = "Waht is the 'BERT'?"
                 documents = index.similarity_search(query)
-                result = qa_chain({"input_documents": documents, "question": query},
-                                return_only_outputs=True)
 
+                with st.spinner("Now.. we are getting the answer.. Please wait.."):
+                    result = qa_chain({"input_documents": documents, "question": query},
+                                      return_only_outputs=True)
 
-                print(result)
+                    print(result)
             
 
 
