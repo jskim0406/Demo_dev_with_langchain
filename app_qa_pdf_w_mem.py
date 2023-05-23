@@ -15,26 +15,19 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.agents import AgentExecutor, Tool, ZeroShotAgent # Key part of the app
 
+# inspired, reference, credit: https://medium.com/@avra42/how-to-build-a-personalized-pdf-chat-bot-with-conversational-memory-965280c160f8
 
 
-def arg_parser():
-    # Arguement parsing..
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--apikey", type=str, required=True, help="If you don't know key value, Just ask jskim")
-    args = parser.parse_args()
-    return args
+def text_custom(font_size, text):
+    '''
+    font_size := ['b', 'm', 's']
+    '''
+    result=f'<p class="{font_size}-font">{text}</p>'
+    return result
 
 
 @st.cache_data
 def _chunks_from_pdf(file:BytesIO):
-    """
-    Args
-        1. file: PDF file 그 잡채.
-    
-    1. pdf에서 text 추출
-    2. text를 Document class로 변환
-    2. Chunking
-    """    
     # 1. pdf에서 texts 추출(texts: [text, text, text, ...])
     pdf = PdfReader(file)
     texts = [p.extract_text() for p in pdf.pages]
@@ -55,8 +48,8 @@ def _chunks_from_pdf(file:BytesIO):
 
 
 @st.cache_data
-def _embed():
-    embeddings = OpenAIEmbeddings(openai_api_key=args.apikey)
+def _embed(embeddeing_model, api_key):
+    embeddings = OpenAIEmbeddings(openai_api_key=api_key, model=embeddeing_model)
 
     with st.spinner("Now.. we are indexing the data.. Please wait.."):
         index = FAISS.from_documents(chunks, embeddings)
@@ -65,59 +58,89 @@ def _embed():
     return index
 
 
-def _init_qa_chain(args, index, chain_type='map_reduce'):
+def _init_qa_chain(index, api_key, chain_type='map_reduce'):
 
     qa = RetrievalQA.from_chain_type(
-                llm=OpenAI(openai_api_key=args.apikey),
+                llm=OpenAI(openai_api_key=api_key),
                 chain_type = chain_type,
                 retriever=index.as_retriever(),
             )
     return qa
 
 
-def main(args):
+def main():
     # Basic UI setup
-    st.title("QA 🤖 with Memory 🧠")
-    st.markdown(
-        "in progress"
-        )
-    st.sidebar.markdown(
-        "still in progress"
-        )
+    st.set_page_config(
+        page_title="Hello, Welcome to Question Answering on Your own PDF file",
+        layout="wide",  # {wide, centered}
+    )
+    # reference
+    ## https://discuss.streamlit.io/t/change-input-text-font-size/29959/4
+    ## https://discuss.streamlit.io/t/change-font-size-in-st-write/7606/2
+    st.markdown("""<style>.b-font {font-size:25px !important;}</style>""", unsafe_allow_html=True)    
+    st.markdown("""<style>.m-font {font-size:20px !important;}</style>""" , unsafe_allow_html=True)    
+    st.markdown("""<style>.s-font {font-size:15px !important;}</style>""" , unsafe_allow_html=True)    
+    tabs_font_css = """<style>div[class*="stTextInput"] label {font-size: 15px;color: white;}</style>"""
+    st.write(tabs_font_css, unsafe_allow_html=True)
 
-    # Load file setting
+    st.title("QA Bot who has memory 😲 on your own PDF file.")
+    t = "Long PDF file ... hard to read it all, right? Just post it here and ask questions. 😋"
+    st.markdown(text_custom('m', t), unsafe_allow_html=True)
+
+    api_key = st.text_input(
+        "Enter Open AI Key.", placeholder = "sk-...", type="password")
+
     loaded_file = st.file_uploader("**Please upload your PDF file here.**", 
                                    type = ["pdf"])
+    
+    with st.sidebar:
+        embeddeing_model = st.selectbox(
+            label='Embedding Model',
+            options=['text-embedding-ada-002']
+        )
+
+        chat_model = st.selectbox(
+            label='Chat Model',
+            options=["gpt-3.5-turbo"]
+        )
+
+        chain = st.radio(
+            label='Chain type',
+            options=['stuff',
+                    'map_reduce']
+        )
+
+        temperature = st.slider(
+            "Temperature",
+            0.0, 1.0, 0.7,
+        )
+
+        st.markdown(
+            """
+            **Blog post:** \n
+            [*Blog title*](URL)
+
+            **Code:** \n
+            [*Github*](https://github.com/jskim0406/SimpleRec_w_langchain.git)
+            """
+        )
+
     if loaded_file:
         fname = loaded_file.name
 
-        # make chunks
         global chunks
         chunks=_chunks_from_pdf(loaded_file)
+        
+        index = _embed(embeddeing_model, api_key)
 
-        # show page content(extra utility)
-        if chunks:
-            with st.expander("Show Page Content", expanded=False):
-                sel_pagenum = st.number_input(
-                    label="Select page number",
-                    min_value=1,
-                    max_value=len(chunks),
-                    step=1
-                )
-                chunks[sel_pagenum-1]
+        ret_qa_chain = _init_qa_chain(index, api_key, chain_type=chain)
 
-        # Embed chunks into dense vector space(= indexing)
-        index = _embed()
-
-        # Define 1. Retrieval Q&A chain
-        ret_qa_chain = _init_qa_chain(args, index)
-
-        # Define 2. 'Tools' and 'Prompt'ing In 'Agent' (Key part of this..)
         tools = [Tool(
             name="PDF QA System",
             func=ret_qa_chain.run,
             description="Useful for when you need to answer questions about the aspects asked. Input may be a partial or fully formed question.",
-            )]
+            )
+        ]
         
         prefix = """Have a conversation with a human, answering the following questions as best you can based on the context and memory available. 
                     You have access to a single tool:"""
@@ -133,20 +156,14 @@ def main(args):
             input_variables=["chat_history", "input", "agent_scratchpad"]
         )
 
-        # Define 3. Memory! 
         if 'memory' not in st.session_state:
-            st.session_state.memory = ConversationBufferMemory(
-                memory_key='chat_history'
-            )
+            st.session_state.memory = ConversationBufferMemory(memory_key='chat_history')
         
-        # Define 4. llm chain
-        # RetrievalQA는 검색을 위한 chain
-        # LLM chain은 chatbot에서 대화를 하기 위한 LM chain
         llm_chain = LLMChain(
             llm=OpenAI(
-            temperature=0.3, 
-            openai_api_key=args.apikey,
-            model_name='gpt-3.5-turbo'
+                temperature=temperature, 
+                openai_api_key=api_key,
+                model_name=chat_model
             ),
             prompt=prompt
         )
@@ -178,11 +195,6 @@ def main(args):
             st.session_state.memory
 
 
-
-
 if __name__=='__main__':
     
-    global args
-    args = arg_parser()
-
-    main(args)
+    main()

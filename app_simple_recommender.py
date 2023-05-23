@@ -5,78 +5,97 @@ from langchain.llms import OpenAI
 from langchain.chains import LLMChain, SimpleSequentialChain
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate 
-from PIL import Image
 
+
+def text_custom(font_size, text):
+    '''
+    font_size := ['b', 'm', 's']
+    '''
+    result=f'<p class="{font_size}-font">{text}</p>'
+    return result
 
 
 def main():
-    # Basic setup of the app(Header, Subheader, ..)
-    '''
-    st.title('text')
-    name = 'text'
-    st.text('제 이름은 {} 입니다.'.format(name)) # 작은 글씨
-    st.header('이 영역은 헤더 영역')  # 제목같은 큰 글씨
-    st.subheader('이 영역은 subheader영역')  # 제목보다는 작은 글씨
-    st.success('작업이 성공했을때 사용하자')         # 녹색 영역
-    st.warning('경고 문구를 보여주고 싶을때 사용하자')   # 노란색 영역
-    st.info('정보를 보여주고 싶을때 사용하자')  # 파란색 영역
-    st.error('문제가 발생했을때 사용')  # 레드 영역    
-    '''
-
-    ########## Basic setup ##########
+ 
     st.set_page_config(
-        page_title="Hello",
-        page_icon='😋',
-        layout="centered",  # {wide, centered}
+        page_title="Hello, Welcome to Simple song recommender page",
+        layout="wide",  # {wide, centered}
+    )
+    # reference
+    ## https://discuss.streamlit.io/t/change-input-text-font-size/29959/4
+    ## https://discuss.streamlit.io/t/change-font-size-in-st-write/7606/2
+    st.markdown("""<style>.b-font {font-size:25px !important;}</style>""", unsafe_allow_html=True)    
+    st.markdown("""<style>.m-font {font-size:20px !important;}</style>""" , unsafe_allow_html=True)    
+    st.markdown("""<style>.s-font {font-size:15px !important;}</style>""" , unsafe_allow_html=True)    
+    tabs_font_css = """<style>div[class*="stTextInput"] label {font-size: 15px;color: black;}</style>"""
+    st.write(tabs_font_css, unsafe_allow_html=True)
+
+
+    st.title("💵 Simple `Song` Recommender")
+    t = "It's hard to find music to comfort me, right? ChatGPT can help."
+    st.markdown(text_custom('b', t), unsafe_allow_html=True)
+    t = "If you tell us about 'Mood' and 'Song Genre', ChatGPT will recommend Song that suits you now! 😋"
+    st.markdown(text_custom('m', t), unsafe_allow_html=True)
+
+    with st.sidebar:
+        model = st.selectbox(
+            label='Model',
+            options=['gpt-3.5-turbo']
+        )
+        temperature = st.slider(
+            "Temperature",
+            0.0, 1.0, 0.7,
+        )
+
+        st.markdown(
+            """
+            **Blog post:** \n
+            [*Blog title*](URL)
+
+            **Code:** \n
+            [*Github*](https://github.com/jskim0406/SimpleRec_w_langchain.git)
+            """
+        )
+
+    mood = st.text_input(
+        "Tell me how you feel right now. And press Enter.",
+        placeholder = "I am exhausted. I want to cheer up.",
     )
 
-    st.title("💵 Simple `Company Name` Recommender")
-
-    st.markdown("회사 이름 짓기 참 어렵죠? ChatGPT가 이 고민을 해결해드립니다.")
-    st.markdown("판매하고자 하는 `물품명`과 `마케팅 대상`을 말씀해주시면, ChatGPT가 적절한 회사명을 추천해줍니다! :)")
-
-    # Add a text input box for the user's question
-    user_product = st.text_input(
-        "Enter Your `Product` which you usually make: ",
-        placeholder = "Mobile Phone",
+    genre = st.text_input(
+        "Please tell me the genre of music you want to listen to. And press Enter.",
+        placeholder = "K-pop"
     )
 
-    user_target = st.text_input(
-        "Enter your 'Target audience' who you want to advertise to",
-        placeholder = "a group of teenage customers who consume cell phones"
+    api_key = st.text_input(
+        "Enter Open AI Key.",
+        placeholder = "sk-...",
+        type="password"
     )
 
-    # Arguement parsing..
-    parser = argparse.ArgumentParser(description='Get API key..')
-    parser.add_argument("--apikey", type=str, required=True, help="If you don't know key value, Just ask jskim")
-    args = parser.parse_args()
-
-    ########## API setting ##########
-    API=args.apikey
-    # If an API key has been provided, create an OpenAI language model instance
-    if API:
-        chatopenai = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.7, openai_api_key=API)
+    if api_key:
+        chatopenai = ChatOpenAI(model_name=model, temperature=temperature, openai_api_key=api_key)
     else:
-        # If an API key hasn't been provided, display a warning message
-        st.warning("Enter your OPENAI API-KEY. Get your OpenAI API key from [here](https://platform.openai.com/account/api-keys).\n")
+        st.warning("Enter your OPENAI API-KEY. If you don't have one Get your OpenAI API key from [here](https://platform.openai.com/account/api-keys).\n")
 
-    ########## LLM Chaining ######### 
-    # "text-davinci-003"(llm model)가 "gpt-3.5-turbo"(Chatmodel) 보다 10배는 더 비싸다고 함. 따라서 아래 코드 중 ChatOpenAI를 활용하는 것을 추천
     if st.button("Hey ChatGPT. It's time to show us what you recommend."):
 
-        template_listup="""
-        You are the CEO who want to establish a company who makes {product} for {audience}.
-        What is a good name for a company who makes {product} for {audience}? 
-        Just say a company name you want to recommend.\n\n
+        template="""
+        You've heard a friend talk about feeling like this.
+        Your friend says {mood}
+
+        You want to recommend a song for a friend.
+        Recommend songs within the {genre} genre that match your friend's mood.
         """
+
         prompt = PromptTemplate(
-            input_variables=["product", "audience"],
-            template=template_listup
+            input_variables=["mood", "genre"],
+            template=template
         )
         chatchain = LLMChain(llm=chatopenai, prompt=prompt)
         
         st.success(
-            chatchain({'product': f'{user_product}', 'audience': f'{user_target}'})['text']
+            chatchain({'mood': f'{mood}', 'genre': f'{genre}'})['text']
         )
 
 
